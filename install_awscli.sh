@@ -2,8 +2,8 @@
 # vim: et smartindent sr sw=4 ts=4:
 APK_TMP=/var/cache/apk
 GET_PIP=https://bootstrap.pypa.io/get-pip.py
-BUILD_PKGS="wget"
-PKGS="$BUILD_PKGS curl python groff less jq"
+BUILD_PKGS="openssl-dev wget python-dev"
+PKGS="$BUILD_PKGS python groff less"
 echo "INFO $0: installing python, pip and awscli"
 apk --no-cache add --update $PKGS                  \
 && wget -q -T 10 -O /var/tmp/get-pip.py $GET_PIP   \
