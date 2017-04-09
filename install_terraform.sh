@@ -43,8 +43,6 @@ if [[ $(echo -e "$VER\n$XVER" | sort -V | head -n 1) == "$VER" ]]; then
     exit 1
 fi
 
-exit
-
 if [[ -f $BIN/${APP} ]]; then
     if [[ -L $BIN/${APP} ]]; then
         if ! rm $BIN/${APP}
