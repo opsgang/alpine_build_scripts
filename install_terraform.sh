@@ -94,7 +94,6 @@ if [[ -w /etc/vim/bundle ]] && [[ ! -d /etc/vim/bundle/vim-terraform ]]; then
         apk --no-cache add --update git
     fi
     (
-        /etc/vim/bundle/vim-terraform >/dev/null 2>&1
         cd /etc/vim/bundle
         git clone https://github.com/hashivim/vim-terraform.git
         rm -rf vim-terraform/.git
