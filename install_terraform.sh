@@ -1,48 +1,73 @@
 #!/bin/sh
 # vim: et smartindent sr sw=4 ts=4:
+
+# CAVEAT: script only works with single binary versions
+# i.e versions greater than $XVER
 #
-# Install version of terraform.
-# Allows multiple terraform versions
-# under /usr/local/bin
+# Use to install multiple versions of terraform.
+# and switch between them.
 #
-# /usr/local/bin/terraform symlink to desired one.
+# /usr/local/bin/terraform is symlinked to desired
+# versioned one under /usr/local/bin.
 #
 # Also installs vim plugin if pathogen detected.
 #
+APP=terraform
+XVER=0.6.16
 VER=${1:-$TERRAFORM_VERSION}
 BIN="/usr/local/bin"
-ZIP="$BIN/terraform-$VER.zip"
+ZIP="$BIN/${APP}-$VER.zip"
 
 APK_TMP="/var/cache/apk"
 
 if [[ -z "$VER" ]]; then
-    echo "ERROR $0: you must supply a version of terraform to use"
+    echo "ERROR $0: you must supply a version of ${APP} to use"
     exit 1
 fi
 
-if [[ -f $BIN/terraform ]]; then
-    if [[ -L $BIN/terraform ]]; then
-        if ! rm $BIN/terraform
+if [[ "$VER" == "list" ]] || [[ "$VER" == "show" ]] ; then
+
+    # ... ideally we have recent sort that supports -V
+    sort_opts="-rV"
+    ! apk info | grep "^sort$" >/dev/null 2>&1 && sort_opts=""
+
+    echo "Versions available under $BIN:"
+    if [[ -L $BIN/${APP} ]]; then
+        echo "using: $(ls -l $BIN/${APP} | sed -e 's/.* \([^ ]\+ -> [^ ]\+\)/\1/')"
+    fi
+    f=$(ls -1 $BIN/${APP}-* 2>/dev/null | sed -e 's/.*${APP}-//' | sort $sort_opts || echo "None found")
+fi
+
+if [[ $(echo -e "$VER\n$XVER" | sort -V | head -n 1) == "$VER" ]]; then
+    echo "ERROR $0: script only works with versions greater than $XVER"
+    exit 1
+fi
+
+exit
+
+if [[ -f $BIN/${APP} ]]; then
+    if [[ -L $BIN/${APP} ]]; then
+        if ! rm $BIN/${APP}
         then
-            echo "ERROR $0: ... could not delete symlink $BIN/terraform"
+            echo "ERROR $0: ... could not delete symlink $BIN/${APP}"
             exit 1
         fi
-    elif [[ -x $BIN/terraform ]]; then
-        OLDVER=$($BIN/terraform --version | grep '^Terraform v' | sed -e 's/.* v\(.*\)$/\1/')
-        if ! mv $BIN/terraform $BIN/terraform-$OLDVER
+    elif [[ -x $BIN/${APP} ]]; then
+        OLDVER=$($BIN/${APP} --version | grep '^Terraform v' | sed -e 's/.* v\(.*\)$/\1/')
+        if ! mv $BIN/${APP} $BIN/${APP}-$OLDVER
         then
-            echo "ERROR $0: ... could not move existing to $BIN/terraform-$OLDVER"
+            echo "ERROR $0: ... could not move existing to $BIN/${APP}-$OLDVER"
             exit 1
         fi
     else
-        echo "ERROR $0: ... $BIN/terraform is not a bin or symlink to bin"
+        echo "ERROR $0: ... $BIN/${APP} is not a bin or symlink to bin"
         exit 1
     fi
 fi
 
-if [[ ! -x $BIN/terraform-$VER ]]; then
-    BASE_URI="https://releases.hashicorp.com/terraform"
-    DOWNLOAD_URI="$BASE_URI/$VER/terraform_${VER}_linux_amd64.zip"
+if [[ ! -x $BIN/${APP}-$VER ]]; then
+    BASE_URI="https://releases.hashicorp.com/${APP}"
+    DOWNLOAD_URI="$BASE_URI/$VER/${APP}_${VER}_linux_amd64.zip"
 
     REQ_PKGS="wget unzip ca-certificates"
     for p in $REQ_PKGS; do
@@ -57,37 +82,43 @@ if [[ ! -x $BIN/terraform-$VER ]]; then
         apk --no-cache add --update $BUILD_PKGS
     fi
 
-    echo "INFO $0: ... downloading terraform $VER"
-    wget -q -T 60 -O $ZIP $DOWNLOAD_URI
-    if ! unzip -p $ZIP | cat >$BIN/terraform-$VER
+    echo "INFO $0: ... downloading ${APP} $VER"
+    if ! wget -q -T 60 -O $ZIP $DOWNLOAD_URI
     then
-        echo "ERROR $0: could not extract terraform from zip"
+        echo "ERROR $0: could not download $VER from $DOWNLOAD_URI"
+        echo "ERROR $0: ... are you sure it exists?"
+        rm $ZIP >/dev/null 2>&1
         exit 1
     fi
-    chmod a+x $BIN/terraform-$VER
+    if ! unzip -p $ZIP | cat >$BIN/${APP}-$VER
+    then
+        echo "ERROR $0: could not extract ${APP} from zip"
+        exit 1
+    fi
+    chmod a+x $BIN/${APP}-$VER
     rm -f $ZIP
 else
-    echo "INFO $0: ... $BIN/terraform-$VER available ."
+    echo "INFO $0: ... $BIN/${APP}-$VER available ."
 fi
 
-echo "INFO $0: ... pointing $BIN/terraform to $VER"
-if ! ln -s $BIN/terraform-$VER $BIN/terraform
+echo "INFO $0: ... pointing $BIN/${APP} to $VER"
+if ! ln -s $BIN/${APP}-$VER $BIN/${APP}
 then
-    echo "ERROR $0: could not repoint $BIN/terraform"
+    echo "ERROR $0: could not repoint $BIN/${APP}"
     exit 1
 fi
 
-if terraform --version | grep "v${VER}$" 2>/dev/null
+if ${APP} --version | grep "v${VER}$" 2>/dev/null
 then
-    echo "INFO $0: installed terraform $VER successfully"
+    echo "INFO $0: installed ${APP} $VER successfully"
 else
     echo "INFO $0: failed to install"
     exit 1
 fi
 
 # ... install vim plugin if appropriate
-if [[ -w /etc/vim/bundle ]] && [[ ! -d /etc/vim/bundle/vim-terraform ]]; then
-    echo "INFO $0: installing vim terraform plugin"
+if [[ -w /etc/vim/bundle ]] && [[ ! -d /etc/vim/bundle/vim-${APP} ]]; then
+    echo "INFO $0: installing vim ${APP} plugin"
     if ! apk info | grep '^git$' >/dev/null 2>&1
     then
         BUILD_PKGS="$BUILD_PKGS git"
@@ -95,8 +126,8 @@ if [[ -w /etc/vim/bundle ]] && [[ ! -d /etc/vim/bundle/vim-terraform ]]; then
     fi
     (
         cd /etc/vim/bundle
-        git clone https://github.com/hashivim/vim-terraform.git
-        rm -rf vim-terraform/.git
+        git clone https://github.com/hashivim/vim-${APP}.git
+        rm -rf vim-${APP}/.git
     )
 fi
 
