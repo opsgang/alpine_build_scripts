@@ -1,6 +1,6 @@
 #!/bin/sh
 # vim: ts=4 sw=4 sr et smartindent:
-# create_user_core.sh
+# coreos_poweruser.sh
 # - suitable for alpine-based on coreos host
 # - uses uid, gid 500 from coreos
 ###################################################
