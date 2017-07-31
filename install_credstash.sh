@@ -2,8 +2,8 @@
 # vim: et smartindent sr sw=4 ts=4:
 APK_TMP=/var/cache/apk
 GET_PIP=https://bootstrap.pypa.io/get-pip.py
-BUILD_PKGS="wget make python-dev alpine-sdk libffi-dev openssl-dev"
-PKGS="$BUILD_PKGS curl python less"
+BUILD_PKGS="wget make python-dev alpine-sdk libffi-dev"
+PKGS="$BUILD_PKGS curl python less openssl-dev"
 echo "INFO $0: installing python, pip and credstash"
 apk --no-cache add --update $PKGS                  \
 && wget -q -T 10 -O /var/tmp/get-pip.py $GET_PIP   \
