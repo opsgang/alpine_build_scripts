@@ -35,11 +35,18 @@ if [[ "$VER" == "list" ]] || [[ "$VER" == "show" ]] ; then
     if [[ -L $BIN/${APP} ]]; then
         echo "using: $(ls -l $BIN/${APP} | sed -e 's/.* \([^ ]\+ -> [^ ]\+\)/\1/')"
     fi
-    f=$(ls -1 $BIN/${APP}-* 2>/dev/null | sed -e 's/.*${APP}-//' | sort $sort_opts || echo "None found")
+    f=$(
+        set -o pipefail ;
+        ls -1 $BIN/${APP}-* 2>/dev/null \
+        | sed -e 's/.*${APP}-//' \
+        | sort $sort_opts \
+        || echo "None found"
+    )
+    echo "$f" && exit 0
 fi
 
 if [[ $(echo -e "$VER\n$XVER" | sort -V | head -n 1) == "$VER" ]]; then
-    echo "ERROR $0: script only works with versions greater than $XVER"
+    echo "ERROR $0: script only works with versions greater than $XVER" >&2
     exit 1
 fi
 
