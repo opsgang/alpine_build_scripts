@@ -34,6 +34,7 @@ set expandtab
 set smartindent
 set pastetoggle=<F1>
 autocmd FileType make setlocal noexpandtab
+autocmd FileType go setlocal noexpandtab
 EOF
 
 apk --no-cache --purge del $BUILD_PKGS
