@@ -3,8 +3,8 @@
 # For versions of terraform >= 0.10, the provider has to be installed
 # separately.
 #
-VERSIONS_FILE=/provider.versions
-PROVIDERS_DIR=/tf_providers
+PREINSTALLED_PLUGINS=${PREINSTALLED_PLUGINS:-/tf_providers}
+PROVIDER_VERSIONS=${PROVIDER_VERSIONS:-/provider.versions}
 
 need_providers() {
     # only interested if version more than or equal to 0.10.0
@@ -52,17 +52,17 @@ tf_main() {
             | sed -e 's/"//g' -e "s/'//g" -e 's/^ *//' -e 's/ $//'
         )
         f="$f$(tf_provider_code "$pn" "$pv")"
-    done < <(cat $VERSIONS_FILE | grep -v '^#')
+    done < <(cat $PROVIDER_VERSIONS | grep -v '^#')
     echo "$f"
 }
 
 echo "INFO $0: ... checking we need to get providers (if terraform >= 0.10.x)"
 need_providers || exit 0 # exit-on-runtime-err within func
 
-rm -rf $PROVIDERS_DIR ; mkdir -p $PROVIDERS_DIR
+rm -rf $PREINSTALLED_PLUGINS ; mkdir -p $PREINSTALLED_PLUGINS
 
-if [[ ! -r $VERSIONS_FILE ]]; then
-    echo "ERROR $0: ... $VERSIONS_FILE not readable" >&2
+if [[ ! -r $PROVIDER_VERSIONS ]]; then
+    echo "ERROR $0: ... $PROVIDER_VERSIONS not readable" >&2
     exit 1
 fi
 
@@ -70,8 +70,10 @@ echo "INFO $0: ... generating main.tf to download providers"
 f=$(tf_main)
 
 (
-    cd $PROVIDERS_DIR
+    cd $PREINSTALLED_PLUGINS
     echo "$f">main.tf
     terraform init || exit 1
+    rm main.tf
+    find . -name '*.tfstate' -exec rm {} \; || true
 ) || exit 1
 
