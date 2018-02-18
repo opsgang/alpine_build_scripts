@@ -73,7 +73,9 @@ f=$(tf_main)
     cd $PREINSTALLED_PLUGINS
     echo "$f">main.tf
     terraform init || exit 1
-    rm main.tf
-    find . -name '*.tfstate' -exec rm {} \; || true
+    mv .terraform/plugins/* .
+    rm main.tf *.tfstate *.tfstate.backup 2>/dev/null
+    rm -rf .terraform 2>/dev/null
+    find . -name 'lock.json' -exec rm {} \; || true
 ) || exit 1
 

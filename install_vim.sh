@@ -37,6 +37,8 @@ autocmd FileType make setlocal noexpandtab
 autocmd FileType go setlocal noexpandtab
 EOF
 
+cp $VIMRC /etc/skel/.vimrc
+
 apk --no-cache --purge del $BUILD_PKGS
 rm -rf /var/cache/apk/*
 
