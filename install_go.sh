@@ -1,49 +1,82 @@
-#!/bin/sh
+#!/bin/bash
 # vim: et smartindent sr sw=4 ts=4:
-export GOLANG_VERSION=1.9.2
-echo "INFO $0: installing go $GOLANG_VERSION"
+# ... get binaries from official docker image ...
+#
+VER="${1:-1.10}"
+IMG="golang:$VER-alpine3.7"
+_C="golang-$VER-$(date '+%Y%m%d%H%M%S')"
 
-docker_gitrepo="https://github.com/docker-library/golang"
-tmp_dir=/var/tmp/go-$GOLANG_VERSION
-asset_dir=$tmp_dir/1.9/alpine3.6
+LDIR=/usr/local/go/$VER
+TDIR=/var/tmp/go/$VER
 
-echo "INFO $0: gathering build requirements"
-PKGS="ca-certificates bash git gcc musl-dev openssl go wget"
-apk --no-cache add --update $PKGS \
-&& export \
-    GOROOT_BOOTSTRAP="$(go env GOROOT)" \
-    GOOS="$(go env GOOS)" \
-    GOARCH="$(go env GOARCH)" \
-    GO386="$(go env GO386)" \
-    GOARM="$(go env GOARM)" \
-    GOHOSTOS="$(go env GOHOSTOS)" \
-    GOHOSTARCH="$(go env GOHOSTARCH)" \
-&& git clone $docker_gitrepo --depth 1 $tmp_dir \
-&& cd $tmp_dir \
-&& wget -O go.tgz "https://golang.org/dl/go$GOLANG_VERSION.src.tar.gz" \
-&& echo '665f184bf8ac89986cfd5a4460736976f60b57df6b320ad71ad4cef53bb143dc *go.tgz' | sha256sum -c - \
-|| exit 1
+echo "INFO: ... installing go $VER"
+echo "INFO: ... creating required dirs"
+mkdir -p $LDIR $TDIR || exit 1
 
-echo "INFO $0: building go from src"
-tar -C /usr/local -xzf go.tgz \
-&& rm go.tgz \
-&& cd /usr/local/go/src \
-&& for i in $asset_dir/*.patch; do echo $i; patch -p2 -i "$i" ; done \
-&& ./make.bash || exit 1
-
-echo "INFO $0: putting go-wrapper in PATH"
-cp $asset_dir/go-wrapper /usr/local/bin/go-wrapper \
-&& chmod a+x /usr/local/bin/go-wrapper
-
-echo "INFO $0: cleaning up tmp assets"
-apk --no-cache --update del go
-rm -rf $tmp_dir
-
-echo "INFO $0: verifying build"
-if ! go version | grep "go$GOLANG_VERSION"
+if ! apk info | grep '^docker$' >/dev/null
 then
-    echo "ERROR $0:: ... could not build go $GOLANG_VERSION"
-    exit 1
-else
-    exit 1
+    cat <<EOF
+WARNING: This script will only work if your current env
+WARNING: is capable of running a docker daemon.
+WARNING: ... for example, if running this with in another
+WARNING: docker container, you may need to have started it
+WARNING: with the --privileged option.
+WARNING:
+WARNING: Alternatively mount the docker.sock from the host
+WARNING: and make sure the docker user can access that
+WARNING: file in the container.
+EOF
+
+    BUILD_PKGS="docker"
+    apk --no-cache --update add docker || exit 1
+    if [[ ! -e /var/run/docker.sock ]]; then
+        dockerd &
+    fi
+    rc=1
+    retries=5
+    delay=3
+    while [[ $(( retries-- )) -gt 0 ]]; do
+        docker images >/dev/null && rc=0 && break
+        sleep $delay
+    done
+    [[ $rc -ne 0 ]] && echo "ERROR: could not bring up dockerd ..." && exit 1
 fi
+
+docker pull $IMG || exit 1
+
+echo "INFO: starting up container of $IMG from which we will copy the binaries"
+docker run --name $_C --rm $IMG /bin/sh -c "while true ; do sleep 10; done" &
+rc=1
+retries=5
+delay=3
+while [[ $(( retries-- )) -gt 0 ]]; do
+    docker ps | grep "Up.*$_C" >/dev/null && rc=0 && break
+    sleep $delay
+done
+
+[[ $rc -ne 0 ]] && echo "ERROR: could not bring up golang container ..." && exit 1
+
+echo "INFO: copying from $_C:/usr/local/go/bin to $TDIR"
+docker ps -a
+docker cp $_C:/usr/local/go/bin $TDIR
+echo "INFO: copying from $TDIR to $LDIR"
+cp -a $TDIR/bin $LDIR
+rm -rf $TDIR
+
+docker rm -f $_C
+
+echo "INFO: installed - " $(find $LDIR -type f)
+
+if [[ ! -z "$BUILD_PKGS" ]]; then
+    pkill -9 dockerd
+    apk --no-cache --update del $BUILD_PKGS
+fi
+
+(
+  export GOBIN=$LDIR/bin
+  export LGOBIN=$GOBIN
+  export PATH=$GOBIN
+  go version || exit 1
+) || exit 1
+
+exit 0
