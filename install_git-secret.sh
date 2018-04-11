@@ -5,7 +5,7 @@ if [[ -z $(command -v make) ]]; then
   BUILD_PKGS="make"
 fi
 
-PKGS="$BUILD_PKGS git bash gawk"
+PKGS="$BUILD_PKGS git bash gawk gnupg"
 apk --no-cache --update add $PKGS
 
 git clone -q https://github.com/sobolevn/git-secret.git \
