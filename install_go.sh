@@ -2,9 +2,10 @@
 # vim: et smartindent sr sw=4 ts=4:
 # ... get binaries from official docker image ...
 #
-VER="${1:-1.10}"
-IMG="golang:$VER-alpine3.7"
-_C="golang-$VER-$(date '+%Y%m%d%H%M%S')"
+VER="${1:-1.12}"
+ALPINE_VER="${2:-3.9}"
+IMG="golang:${VER}-alpine${ALPINE_VER}"
+_C="golang-${VER}-$(date '+%Y%m%d%H%M%S')"
 
 LDIR=/usr/local/go/$VER
 TDIR=/var/tmp/go/$VER

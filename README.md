@@ -1,6 +1,6 @@
 # alpine\_build\_scripts
 
-_... ash scripts to install common tools on alpine
+_... ash scripts to install common tools on alpine_
 
 ## What?
 
@@ -15,12 +15,17 @@ look very much a long stream of ANDed dockerfile-run directives.
 
 We take pull requests seriously ;)
 
-**Each script should only leave the packages required for the capability they install**
+Each script should cleanup (i.e. remove) any **new** packages installed.
 
-        E.g.
-        You might use wget to download terraform. However your installation script for
-        for terraform should remove it before completion as wget is not required
-        for terraform to run correctly.
+Equally, don't remove any package that was already installed before the
+script ran.
+
+>
+> E.g.
+> You might install wget to download terraform. However your installation script for
+> for terraform should remove it before completion as wget is not required
+> for terraform to run correctly.
+>
 
 ## Why?
 
